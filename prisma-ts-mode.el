@@ -327,7 +327,7 @@
   (let* ((node (prisma--first-column-declaration-in-chunk-of node))
          (max-length (length (treesit-node-text (treesit-node-child node sub-node-num)))))
     (while-let ((candidate (treesit-node-next-sibling node))
-                ((equal (treesit-node-type candidate) "column_declaration"))
+                ((prisma--is-part-column-declaration-or-comment candidate))
                 ((prisma--empty-line-between-nodes node candidate)))
       (setq node candidate)
       (setq max-length (max max-length (length (treesit-node-text (treesit-node-child node sub-node-num))))))
@@ -335,10 +335,15 @@
 
 (defun prisma--first-column-declaration-in-chunk-of (node)
   (while-let ((candidate (treesit-node-prev-sibling node))
-              ((equal (treesit-node-type candidate) "column_declaration"))
+              ((prisma--is-part-column-declaration-or-comment candidate))
               ((prisma--empty-line-between-nodes candidate node)))
     (setq node candidate))
   node)
+
+(defun prisma--is-part-column-declaration-or-comment (candidate)
+  (let ((type (treesit-node-type candidate)))
+    (or (equal type "column_declaration")
+        (equal type "developer_comment"))))
 
 (defun prisma--empty-line-between-nodes (first second)
   (goto-char (treesit-node-end first))
