@@ -280,10 +280,11 @@
       ("model_declaration" (prisma--format-model-declaration))
       ("enum_declaration" (prisma--format-enum-declaration))
       ("datasource_declaration" (prisma--format-model-declaration))
-      ("view_declaration" (prisma--format-model-declaration)))))
+      ("view_declaration" (prisma--format-model-declaration))
+      ("generator_declaration" (prisma--format-model-declaration)))))
 
 (defconst prisma--node-types
-  '("enum_declaration" "model_declaration" "datasource_declaration" "view_declaration"))
+  '("enum_declaration" "model_declaration" "datasource_declaration" "view_declaration" "generator_declaration"))
 
 (defun prisma--current-declaration-type ()
   (treesit-node-type
