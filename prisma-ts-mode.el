@@ -279,15 +279,18 @@
     (pcase (prisma--current-declaration-type)
       ("model_declaration" (prisma--format-model-declaration))
       ("enum_declaration" (prisma--format-enum-declaration))
-      ("datasource_declaration" (prisma--format-model-declaration)))))
+      ("datasource_declaration" (prisma--format-model-declaration))
+      ("view_declaration" (prisma--format-model-declaration)))))
+
+(defconst prisma--node-types
+  '("enum_declaration" "model_declaration" "datasource_declaration" "view_declaration"))
 
 (defun prisma--current-declaration-type ()
   (treesit-node-type
    (treesit-parent-until
     (treesit-node-at (point))
     (lambda (node)
-      (member (treesit-node-type node)
-                           '("enum_declaration" "model_declaration" "datasource_declaration"))))))
+      (member (treesit-node-type node) prisma--node-types)))))
 
 (defun prisma--format-model-declaration ()
   (let ((number-of-columns (length (prisma--model-declaration-children)))
@@ -344,8 +347,7 @@
 (defun prisma--current-model-declaration-node ()
   (treesit-parent-until
      (treesit-node-at (point))
-     (lambda (node) (member (treesit-node-type node)
-                            '("enum_declaration" "model_declaration" "datasource_declaration")))))
+     (lambda (node) (member (treesit-node-type node) prisma--node-types))))
 
 (defun prisma--current-enum-declaration-node ()
   (treesit-parent-until
