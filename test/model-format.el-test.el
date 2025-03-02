@@ -1,7 +1,7 @@
 
 (require 'prisma-ts-mode)
 
-(ert-deftest format-simple-default-indent ()
+(ert-deftest format-model-simple-default-indent ()
   (let ((expected "
 model User {
   id    Int     @id @default(autoincrement())
@@ -14,10 +14,10 @@ model User {
      (insert-file-contents "test/simple.prisma")
      (forward-line 2)
      (prisma-ts-mode)
-     (prisma-format-model)
+     (prisma-format-declaration)
      (should (equal (buffer-string) expected)))))
 
-(ert-deftest format-simple-4-indent ()
+(ert-deftest format-model-simple-4-indent ()
   (let ((expected "
 model User {
     id    Int     @id @default(autoincrement())
@@ -31,10 +31,10 @@ model User {
      (insert-file-contents "test/simple.prisma")
      (forward-line 2)
      (prisma-ts-mode)
-     (prisma-format-model)
+     (prisma-format-declaration)
      (should (equal (buffer-string) expected)))))
 
-(ert-deftest format-chunks ()
+(ert-deftest format-model-chunks ()
   (let ((expected "
 model Post {
   id Int @id @default(autoincrement())
@@ -51,11 +51,11 @@ model Post {
      (insert-file-contents "test/chunks.prisma")
      (forward-line 2)
      (prisma-ts-mode)
-     (prisma-format-model)
+     (prisma-format-declaration)
      (should (equal (buffer-string) expected)))))
 
 
-(ert-deftest format-comments ()
+(ert-deftest format-model-comments ()
   (let ((expected "
 model Post {
   id        Int     @id @default(autoincrement())
@@ -71,5 +71,36 @@ model Post {
      (insert-file-contents "test/comments.prisma")
      (forward-line 2)
      (prisma-ts-mode)
-     (prisma-format-model)
+     (prisma-format-declaration)
+     (should (equal (buffer-string) expected)))))
+
+
+(ert-deftest format-enum ()
+  (let ((expected "
+enum FooEnum {
+  FOO
+  BAR
+  BAZ
+}
+"))
+    (with-temp-buffer
+     (insert-file-contents "test/enum.prisma")
+     (forward-line 2)
+     (prisma-ts-mode)
+     (prisma-format-declaration)
+     (should (equal (buffer-string) expected)))))
+
+
+(ert-deftest format-datasource ()
+  (let ((expected "
+datasource db {
+  provider = \"postgresql\"
+  url      = env(\"DATABASE_URL\")
+}
+"))
+    (with-temp-buffer
+     (insert-file-contents "test/datasource.prisma")
+     (forward-line 2)
+     (prisma-ts-mode)
+     (prisma-format-declaration)
      (should (equal (buffer-string) expected)))))
