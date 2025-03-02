@@ -1,6 +1,13 @@
 
 (require 'prisma-ts-mode)
 
+(defun buffer-test-string (first last)
+  (goto-char (point-min))
+  (forward-line (1- first))
+  (let ((start (point)))
+    (forward-line (- last first))
+    (buffer-substring (1- start) (1+ (point)))))
+
 (ert-deftest format-model-simple-default-indent ()
   (let ((expected "
 model User {
@@ -8,14 +15,14 @@ model User {
   email String  @unique
   name  String?
   posts Post[]
-}
-"))
+}"))
     (with-temp-buffer
-     (insert-file-contents "test/simple.prisma")
-     (forward-line 2)
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 8)
      (prisma-ts-mode)
      (prisma-format-declaration)
-     (should (equal (buffer-string) expected)))))
+     (should (equal (buffer-test-string 7 12) expected)))))
+
 
 (ert-deftest format-model-simple-4-indent ()
   (let ((expected "
@@ -24,15 +31,15 @@ model User {
     email String  @unique
     name  String?
     posts Post[]
-}
-")
+}")
         (prisma-ts-mode-indent-level 4))
     (with-temp-buffer
-     (insert-file-contents "test/simple.prisma")
-     (forward-line 2)
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 8)
      (prisma-ts-mode)
      (prisma-format-declaration)
-     (should (equal (buffer-string) expected)))))
+     (should (equal (buffer-test-string 7 12) expected)))))
+
 
 (ert-deftest format-model-chunks ()
   (let ((expected "
@@ -45,19 +52,18 @@ model Post {
 
   author   User? @relation(fields: [authorId], references: [id])
   authorId Int?
-}
-"))
+}"))
     (with-temp-buffer
-     (insert-file-contents "test/chunks.prisma")
-     (forward-line 2)
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 23)
      (prisma-ts-mode)
      (prisma-format-declaration)
-     (should (equal (buffer-string) expected)))))
+     (should (equal (buffer-test-string 20 29) expected)))))
 
 
 (ert-deftest format-model-comments ()
   (let ((expected "
-model Post {
+model PostComment {
   id        Int     @id @default(autoincrement())
   // commented Int
   title     String
@@ -65,14 +71,13 @@ model Post {
   published Boolean @default(false) // comment foo
   author    User?   @relation(fields: [authorId], references: [id])
   authorId  Int?
-}
-"))
+}"))
     (with-temp-buffer
-     (insert-file-contents "test/comments.prisma")
-     (forward-line 2)
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 33)
      (prisma-ts-mode)
      (prisma-format-declaration)
-     (should (equal (buffer-string) expected)))))
+     (should (equal (buffer-test-string 31 39) expected)))))
 
 
 (ert-deftest format-enum ()
@@ -81,14 +86,13 @@ enum FooEnum {
   FOO
   BAR
   BAZ
-}
-"))
+}"))
     (with-temp-buffer
-     (insert-file-contents "test/enum.prisma")
-     (forward-line 2)
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 16)
      (prisma-ts-mode)
      (prisma-format-declaration)
-     (should (equal (buffer-string) expected)))))
+     (should (equal (buffer-test-string 14 18) expected)))))
 
 
 (ert-deftest format-datasource ()
@@ -96,11 +100,11 @@ enum FooEnum {
 datasource db {
   provider = \"postgresql\"
   url      = env(\"DATABASE_URL\")
-}
-"))
+}"))
     (with-temp-buffer
-     (insert-file-contents "test/datasource.prisma")
+     (insert-file-contents "test/schema.prisma")
      (forward-line 2)
      (prisma-ts-mode)
      (prisma-format-declaration)
-     (should (equal (buffer-string) expected)))))
+     (should (equal (buffer-test-string 2 5) expected)))))
+
