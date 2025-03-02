@@ -125,3 +125,19 @@ model UserLineBreak {
      (prisma-ts-mode)
      (prisma-format-declaration)
      (should (equal (buffer-test-string 41 48) expected)))))
+
+
+(ert-deftest format-view ()
+  (let ((expected "
+view UserView {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  posts Post[]
+}"))
+    (with-temp-buffer
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 52)
+     (prisma-ts-mode)
+     (prisma-format-declaration)
+     (should (equal (buffer-test-string 50 55) expected)))))

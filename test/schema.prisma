@@ -46,3 +46,10 @@ model UserLineBreak {
  name  String?
   posts  Post[]
 }
+
+view UserView {
+  id       Int @id              @default(autoincrement())
+   email      String        @unique
+ name  String?
+  posts  Post[]
+}
