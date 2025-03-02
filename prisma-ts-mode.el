@@ -274,6 +274,10 @@
 
 ;;;###autoload
 (defun prisma-format-declaration ()
+  "Format the current prisma declaration
+
+The current prisma declaration is formatted according to the
+"
   (interactive)
   (save-excursion
     (pcase (prisma--current-declaration-type)
@@ -384,7 +388,8 @@
            (node-end-pos (prisma--node-end-position node first-node-num))
            (gap-length (- (treesit-node-start node-after) (treesit-node-end node-before)))
            (max-length (prisma--max-length-declaration-in-chunk-of node first-node-num))
-           (gap-needed (1+ (- max-length node-end-pos)))
+           (required-gap (if (equal (treesit-node-type node) "assignment_expression") 1 2))
+           (gap-needed (+ required-gap (- max-length node-end-pos)))
            (gap-discrep (- gap-needed gap-length)))
       (goto-char (treesit-node-start node-after))
       (if (>= gap-discrep 0)
