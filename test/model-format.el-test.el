@@ -11,10 +11,10 @@
 (ert-deftest format-model-simple-default-indent ()
   (let ((expected "
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+  id     Int      @id @default(autoincrement())
+  email  String   @unique
+  name   String?
+  posts  Post[]
 }"))
     (with-temp-buffer
      (insert-file-contents "test/schema.prisma")
@@ -27,10 +27,10 @@ model User {
 (ert-deftest format-model-simple-4-indent ()
   (let ((expected "
 model User {
-    id    Int     @id @default(autoincrement())
-    email String  @unique
-    name  String?
-    posts Post[]
+    id     Int      @id @default(autoincrement())
+    email  String   @unique
+    name   String?
+    posts  Post[]
 }")
         (prisma-ts-mode-indent-level 4))
     (with-temp-buffer
@@ -44,14 +44,14 @@ model User {
 (ert-deftest format-model-chunks ()
   (let ((expected "
 model Post {
-  id Int @id @default(autoincrement())
+  id  Int  @id @default(autoincrement())
 
-  title     String
-  content   String?
-  published Boolean @default(false)
+  title      String
+  content    String?
+  published  Boolean  @default(false)
 
-  author   User? @relation(fields: [authorId], references: [id])
-  authorId Int?
+  author    User?  @relation(fields: [authorId], references: [id])
+  authorId  Int?
 }"))
     (with-temp-buffer
      (insert-file-contents "test/schema.prisma")
@@ -64,13 +64,13 @@ model Post {
 (ert-deftest format-model-comments ()
   (let ((expected "
 model PostComment {
-  id        Int     @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   // commented Int
-  title     String
-  content   String?
-  published Boolean @default(false) // comment foo
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  Int?
+  title      String
+  content    String?
+  published  Boolean  @default(false) // comment foo
+  author     User?    @relation(fields: [authorId], references: [id])
+  authorId   Int?
 }"))
     (with-temp-buffer
      (insert-file-contents "test/schema.prisma")
@@ -112,12 +112,12 @@ datasource db {
 (ert-deftest format-model-linebreak ()
   (let ((expected "
 model UserLineBreak {
-  id    Int     @id
-                @default(autoincrement())
-  email String  @unique
-                @db.VarChar(3000)
-  name  String?
-  posts Post[]
+  id     Int      @id
+                  @default(autoincrement())
+  email  String   @unique
+                  @db.VarChar(3000)
+  name   String?
+  posts  Post[]
 }"))
     (with-temp-buffer
      (insert-file-contents "test/schema.prisma")
@@ -130,10 +130,10 @@ model UserLineBreak {
 (ert-deftest format-view ()
   (let ((expected "
 view UserView {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-  posts Post[]
+  id     Int      @id @default(autoincrement())
+  email  String   @unique
+  name   String?
+  posts  Post[]
 }"))
     (with-temp-buffer
      (insert-file-contents "test/schema.prisma")
