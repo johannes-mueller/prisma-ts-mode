@@ -281,37 +281,117 @@ The current prisma declaration is formatted according to the
   (interactive)
   (save-excursion
     (pcase (prisma--current-declaration-type)
-      ("model_declaration" (prisma--format-model-declaration))
+      ((pred (lambda (type) (not type))) nil)
       ("enum_declaration" (prisma--format-enum-declaration))
-      ("datasource_declaration" (prisma--format-model-declaration))
-      ("view_declaration" (prisma--format-model-declaration))
-      ("generator_declaration" (prisma--format-model-declaration)))))
+      (_ (prisma--format-other-declaration)))))
 
 (defconst prisma--node-types
   '("enum_declaration" "model_declaration" "datasource_declaration" "view_declaration" "generator_declaration"))
 
 (defun prisma--current-declaration-type ()
+  "Determine the current prisma node type."
   (treesit-node-type
    (treesit-parent-until
     (treesit-node-at (point))
     (lambda (node)
       (member (treesit-node-type node) prisma--node-types)))))
 
-(defun prisma--format-model-declaration ()
-  (let ((number-of-columns (length (prisma--model-declaration-children)))
-        (max-number-of-grand-children (apply 'max (mapcar 'treesit-node-child-count (prisma--model-declaration-children)))))
-    (dotimes (n number-of-columns) (prisma--indent-nth-child n))
+(defun prisma--format-enum-declaration ()
+  "Format a prisma enum declaration."
+  (let ((enum-node (prisma--current-declaration-node)))
+    (indent-region (treesit-node-start enum-node) (treesit-node-end enum-node))))
+
+(defun prisma--format-other-declaration ()
+  "Format prisma declrations of type generator, datasource, model, and view."
+  (let ((number-of-columns (length (prisma--declaration-children)))
+        (max-number-of-grand-children (apply 'max (mapcar 'treesit-node-child-count (prisma--declaration-children)))))
+    (dotimes (n number-of-columns)
+      (prisma--node-initial-indent (nth n (prisma--declaration-children))))
     (dotimes (sub-node-num (- max-number-of-grand-children 2))
       (dotimes (n number-of-columns)
-        (prisma--do-spacing (nth n (prisma--model-declaration-children)) sub-node-num)))
+        (prisma--do-spacing (nth n (prisma--declaration-children)) sub-node-num)))
     (dotimes (n number-of-columns)
-      (prisma--treat-attributes (nth n (prisma--model-declaration-children))))))
+      (prisma--treat-attributes (nth n (prisma--declaration-children))))))
 
-(defun prisma--attribute-children (node)
-  (seq-filter (lambda (nd) (equal (treesit-node-type nd) "attribute"))
-              (treesit-node-children node)))
+(defun prisma--declaration-children ()
+  "All the node children of a prisma declaration."
+  (seq-filter (lambda (node)
+                (member (treesit-node-type node) '("column_declaration" "assignment_expression")))
+              (treesit-node-children (prisma--current-model-start-node))))
+
+(defun prisma--current-model-start-node ()
+  "Find the first subnode of the current prisma declaration."
+  (treesit-search-subtree
+   (prisma--current-declaration-node) "statement_block"))
+
+(defun prisma--current-declaration-node ()
+  "Find the current prisma prisma declaration node."
+  (treesit-parent-until
+     (treesit-node-at (point))
+     (lambda (node) (member (treesit-node-type node) prisma--node-types))))
+
+(defun prisma--node-initial-indent (node)
+  "Indent NODE."
+  (goto-char (treesit-node-start node))
+  (let ((end (point)))
+    (beginning-of-line)
+    (delete-region (point) end)
+    (insert (make-string prisma-ts-mode-indent-level ?\s))))
+
+(defun prisma--node-end-position (node sub-node-num)
+  "Determine the line end position of the SUB-NODE-NUM th child of NODE."
+  (if-let ((node (treesit-node-child node sub-node-num)))
+      (progn
+        (goto-char (treesit-node-end node))
+        (current-column))
+    0))
+
+(defun prisma--do-spacing (node first-node-num)
+  "Adjust the space after the FIRST-NODE-NUM th child of NODE."
+  (when (> (treesit-node-child-count node) (1+ first-node-num))
+    (let* ((node-before (treesit-node-child node first-node-num))
+           (node-after (treesit-node-child node (1+ first-node-num)))
+           (node-end-pos (prisma--node-end-position node first-node-num))
+           (gap-length (- (treesit-node-start node-after) (treesit-node-end node-before)))
+           (max-length (prisma--max-length-declaration-in-chunk-of node first-node-num))
+           (required-gap (if (equal (treesit-node-type node) "assignment_expression") 1 2))
+           (gap-needed (+ required-gap (- max-length node-end-pos)))
+           (gap-discrep (- gap-needed gap-length)))
+      (goto-char (treesit-node-start node-after))
+      (if (>= gap-discrep 0)
+          (insert (make-string gap-discrep ?\s))
+        (delete-char gap-discrep)))))
+
+(defun prisma--max-length-declaration-in-chunk-of (node sub-node-num)
+  "Determine the maxumum length of the SUB-NODE-NUM th child of NODE in current chunk."
+  (let* ((node (prisma--first-column-declaration-in-chunk-of node))
+         (max-length (prisma--node-end-position node sub-node-num)))
+    (while-let ((candidate (treesit-node-next-sibling node))
+                ((prisma--is-part-column-declaration-or-comment candidate))
+                ((prisma--no-empty-line-between-nodes node candidate)))
+      (setq node candidate)
+      (setq max-length (max max-length (prisma--node-end-position node sub-node-num))))
+    max-length))
+
+(defun prisma--first-column-declaration-in-chunk-of (node)
+  "Find the first declaration of the current chunk in NODE."
+  (while-let ((candidate (treesit-node-prev-sibling node))
+              ((prisma--is-part-column-declaration-or-comment candidate))
+              ((prisma--no-empty-line-between-nodes candidate node)))
+    (setq node candidate))
+  node)
+
+(defun prisma--is-part-column-declaration-or-comment (candidate)
+  "Check if CANDIDATE is not a delimiter node."
+  (not (member (treesit-node-type candidate) '("{" "}"))))
+
+(defun prisma--no-empty-line-between-nodes (first second)
+  "Check if there is no empty line between nodes FIRST and SECOND."
+  (goto-char (treesit-node-end first))
+  (not (search-forward-regexp "^[:space:]*$" (treesit-node-start second) t)))
 
 (defun prisma--treat-attributes (node)
+  "Do the spacing of the attribute subnodes of NODE."
   (let ((attribute-nodes (prisma--attribute-children node)))
     (dotimes (n (length attribute-nodes))
       (let ((attr-node (nth n (prisma--attribute-children node))))
@@ -336,90 +416,10 @@ The current prisma declaration is formatted according to the
                     (insert (make-string diff ?\s))
                   (delete-char (- diff)))))))))))
 
-(defun prisma--format-enum-declaration ()
-  (let ((enum-node (prisma--current-enum-declaration-node)))
-    (indent-region (treesit-node-start enum-node) (treesit-node-end enum-node))))
-
-(defun prisma--model-declaration-children ()
-  (seq-filter (lambda (node)
-                (member (treesit-node-type node) '("column_declaration" "assignment_expression")))
-              (treesit-node-children (prisma--current-model-start-node))))
-
-(defun prisma--current-model-start-node ()
-  (treesit-search-subtree
-   (prisma--current-model-declaration-node) "statement_block"))
-
-(defun prisma--current-model-declaration-node ()
-  (treesit-parent-until
-     (treesit-node-at (point))
-     (lambda (node) (member (treesit-node-type node) prisma--node-types))))
-
-(defun prisma--current-enum-declaration-node ()
-  (treesit-parent-until
-     (treesit-node-at (point))
-     (lambda (node) (equal (treesit-node-type node) "enum_declaration"))))
-
-(defun prisma--current-datasource-declaration-node ()
-  (treesit-parent-until
-     (treesit-node-at (point))
-     (lambda (node) (equal (treesit-node-type node) "datasource_declaration"))))
-
-(defun prisma--indent-nth-child (n)
-  (prisma--node-initial-indent (nth n (prisma--model-declaration-children))))
-
-(defun prisma--node-initial-indent (node)
-  (goto-char (treesit-node-start node))
-  (let ((end (point)))
-    (beginning-of-line)
-    (delete-region (point) end)
-    (insert (make-string prisma-ts-mode-indent-level ?\s))))
-
-(defun prisma--node-end-position (node sub-node-num)
-  (if-let ((node (treesit-node-child node sub-node-num)))
-      (progn
-        (goto-char (treesit-node-end node))
-        (current-column))
-    0))
-
-(defun prisma--do-spacing (node first-node-num)
-  (when (> (treesit-node-child-count node) (1+ first-node-num))
-    (let* ((node-before (treesit-node-child node first-node-num))
-           (node-after (treesit-node-child node (1+ first-node-num)))
-           (node-end-pos (prisma--node-end-position node first-node-num))
-           (gap-length (- (treesit-node-start node-after) (treesit-node-end node-before)))
-           (max-length (prisma--max-length-declaration-in-chunk-of node first-node-num))
-           (required-gap (if (equal (treesit-node-type node) "assignment_expression") 1 2))
-           (gap-needed (+ required-gap (- max-length node-end-pos)))
-           (gap-discrep (- gap-needed gap-length)))
-      (goto-char (treesit-node-start node-after))
-      (if (>= gap-discrep 0)
-          (insert (make-string gap-discrep ?\s))
-        (delete-char gap-discrep)))))
-
-(defun prisma--max-length-declaration-in-chunk-of (node sub-node-num)
-  (let* ((node (prisma--first-column-declaration-in-chunk-of node))
-         (max-length (prisma--node-end-position node sub-node-num)))
-    (while-let ((candidate (treesit-node-next-sibling node))
-                ((prisma--is-part-column-declaration-or-comment candidate))
-                ((prisma--no-empty-line-between-nodes node candidate)))
-      (setq node candidate)
-      (setq max-length (max max-length (prisma--node-end-position node sub-node-num))))
-    max-length))
-
-(defun prisma--first-column-declaration-in-chunk-of (node)
-  (while-let ((candidate (treesit-node-prev-sibling node))
-              ((prisma--is-part-column-declaration-or-comment candidate))
-              ((prisma--no-empty-line-between-nodes candidate node)))
-    (setq node candidate))
-  node)
-
-(defun prisma--is-part-column-declaration-or-comment (candidate)
-  (not (member (treesit-node-type candidate) '("{" "}"))))
-
-(defun prisma--no-empty-line-between-nodes (first second)
-  (goto-char (treesit-node-end first))
-  (not (search-forward-regexp "^[[:blank:]]*$" (treesit-node-start second) t)))
-
+(defun prisma--attribute-children (node)
+  "Find all children of NODE of type `attribute'."
+  (seq-filter (lambda (nd) (equal (treesit-node-type nd) "attribute"))
+              (treesit-node-children node)))
 
 (provide 'prisma-ts-mode)
 ;; Local Variables:
