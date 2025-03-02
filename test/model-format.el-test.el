@@ -108,3 +108,20 @@ datasource db {
      (prisma-format-declaration)
      (should (equal (buffer-test-string 2 5) expected)))))
 
+
+(ert-deftest format-model-linebreak ()
+  (let ((expected "
+model UserLineBreak {
+  id    Int     @id
+                @default(autoincrement())
+  email String  @unique
+                @db.VarChar(3000)
+  name  String?
+  posts Post[]
+}"))
+    (with-temp-buffer
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 43)
+     (prisma-ts-mode)
+     (prisma-format-declaration)
+     (should (equal (buffer-test-string 41 48) expected)))))

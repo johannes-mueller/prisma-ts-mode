@@ -5,7 +5,7 @@ datasource db {
 }
 
 model User {
-  id       Int @id @default(autoincrement())
+  id       Int @id              @default(autoincrement())
    email      String        @unique
  name  String?
   posts  Post[]
@@ -40,8 +40,9 @@ model PostComment {
 
 model UserLineBreak {
  id   Int @id
-  @default(autoincrement())
-   email      String        @unique
+    @default(autoincrement())
+  email      String        @unique
+                                                   @db.VarChar(3000)
  name  String?
   posts  Post[]
 }
