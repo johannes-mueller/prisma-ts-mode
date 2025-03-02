@@ -53,3 +53,9 @@ view UserView {
  name  String?
   posts  Post[]
 }
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures    = ["sample-preview-feature"]
+  binaryTargets         = ["linux-musl"]
+}

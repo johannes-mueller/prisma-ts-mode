@@ -141,3 +141,18 @@ view UserView {
      (prisma-ts-mode)
      (prisma-format-declaration)
      (should (equal (buffer-test-string 50 55) expected)))))
+
+
+(ert-deftest format-generator ()
+  (let ((expected "
+generator client {
+  provider        = \"prisma-client-js\"
+  previewFeatures = [\"sample-preview-feature\"]
+  binaryTargets   = [\"linux-musl\"]
+}"))
+    (with-temp-buffer
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 59)
+     (prisma-ts-mode)
+     (prisma-format-declaration)
+     (should (equal (buffer-test-string 57 61) expected)))))
