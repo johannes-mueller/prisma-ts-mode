@@ -418,7 +418,7 @@ The current prisma declaration is formatted according to the
 
 (defun prisma--no-empty-line-between-nodes (first second)
   (goto-char (treesit-node-end first))
-  (not (search-forward-regexp "^[:space:]*$" (treesit-node-start second) t)))
+  (not (search-forward-regexp "^[[:blank:]]*$" (treesit-node-start second) t)))
 
 
 (provide 'prisma-ts-mode)
