@@ -41,7 +41,7 @@ model User {
      (should (equal (buffer-test-string 7 12) expected)))))
 
 
-(ert-deftest format-model-chunks ()
+(ert-deftest format-model-chunks-no-whitespace ()
   (let ((expected "
 model Post {
   id  Int  @id @default(autoincrement())
@@ -58,6 +58,28 @@ model Post {
      (forward-line 23)
      (prisma-ts-mode)
      (prisma-format-declaration)
+     (should (equal (buffer-test-string 20 29) expected)))))
+
+
+(ert-deftest format-model-chunks-with-whitespace ()
+  (let ((expected "
+model Post {
+  id  Int  @id @default(autoincrement())
+
+  title      String
+  content    String?
+  published  Boolean  @default(false)
+
+  author    User?  @relation(fields: [authorId], references: [id])
+  authorId  Int?
+}"))
+    (with-temp-buffer
+     (insert-file-contents "test/schema.prisma")
+     (forward-line 21)
+     (insert "   ")
+     (prisma-ts-mode)
+     (prisma-format-declaration)
+     (delete-char -3)
      (should (equal (buffer-test-string 20 29) expected)))))
 
 
